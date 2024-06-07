@@ -146,14 +146,9 @@ jobs:
         env:
           DOCKER_METADATA_OUTPUT_JSON: ${{ needs.meta.outputs.json }}
         run: |
-          tag_options=$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")
-          docker buildx imagetools create "$tag_options" $(printf '${{ needs.env.outputs.REGISTRY_IMAGE }}@sha256:%s ' *)
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          $(printf '${{ needs.env.outputs.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          cat << EOF >> $GITHUB_STEP_SUMMARY
-          ```console
-          $ docker buildx imagetools inspect ${{ needs.env.outputs.REGISTRY_IMAGE }}:${{ needs.meta.outputs.version }}
-          $(docker buildx imagetools inspect ${{ needs.env.outputs.REGISTRY_IMAGE }}:${{ needs.meta.outputs.version }})
-          ```
-          EOF
+          docker buildx imagetools inspect ${{ needs.env.outputs.REGISTRY_IMAGE }}:${{ needs.meta.outputs.version }}

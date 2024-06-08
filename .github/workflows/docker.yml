@@ -102,8 +102,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ needs.meta.outputs.labels }}
           outputs: type=image,name=${{ needs.env.outputs.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=${{ fromJson(needs.env.outputs.PUSH) }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
 
       - if: ${{ fromJson(needs.env.outputs.PUSH) }}
         name: Export digest

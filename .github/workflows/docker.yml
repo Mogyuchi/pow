@@ -26,6 +26,8 @@ permissions: {}
 
 jobs:
   env:
+    # release-please によるコミットの時は workflow_call でのみ実行する
+    if: ${{ !( github.workflow == 'Create and publish a Docker image' && startsWith(github.event.head_commit.message, 'release:') && github.event.head_commit.author.name == 'j-eoeo-release[bot]' ) }}
     runs-on: ubuntu-latest
     outputs:
       REGISTRY_IMAGE: ${{ steps.lowercase.outputs.REGISTRY_IMAGE }}
@@ -38,8 +40,6 @@ jobs:
 
   meta:
     needs: [env]
-    # release-please によるコミットの時は workflow_call でのみ実行する
-    if: ${{ !( github.workflow == 'Create and publish a Docker image' && startsWith(github.event.head_commit.message, 'release:') && github.event.head_commit.author.name == 'j-eoeo-release[bot]' ) }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version}}
@@ -99,20 +99,21 @@ jobs:
           cache-from: type=gha,scope=buildkit-${{ matrix.platform }}
           cache-to: type=gha,scope=buildkit-${{ matrix.platform }},mode=max
 
-      - if: ${{ fromJson(needs.env.outputs.PUSH) }}
+      - id: export-digest
+        if: ${{ fromJson(needs.env.outputs.PUSH) }}
         name: Export digest
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
-
-      - name: Prepare
-        id: prepare
+      - id: prepare
+        if: ${{ steps.export-digest.conclusion == 'success' }}
+        name: Prepare
         run: |
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_OUTPUT
-
-      - name: Upload digest
+      - if: ${{ steps.export-digest.conclusion == 'success' }}
+        name: Upload digest
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: digests-${{ steps.prepare.outputs.PLATFORM_PAIR }}
